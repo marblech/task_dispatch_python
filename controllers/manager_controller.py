@@ -33,7 +33,7 @@ def get_task_list():
         tasks = [{
             "id": task.id,
             "taskname": task.taskname,
-            "pid": task.pid,
+            "udp_port": task.udp_port,
             "create_time": str(task.create_time),
             "port": task.port,
             "cam1_ip": task.cam1_ip,

@@ -5,8 +5,10 @@ from models.process import TaskConfig
 from ini_file_controller.ini_file_helper import IniFileHelper
 from controllers.process_controller import process_bp
 from controllers.manager_controller import manager_controller
+from controllers.auth_controller import auth_bp, init_default_user
 from task_controller.task_starter import start_task_process, is_managed_temp_model_file
 from task_controller.cleanup_daemon import start_cleanup_daemon
+from udp_controller.udp_listener import start_udp_listener
 import time
 
 from db import dbconn
@@ -19,9 +21,15 @@ PORT = 8212
 DIRECT_RUN_THREADED = DEBUG_MODE
 
 
+# 设置session密钥
+import secrets
+SESSION_SECRET = os.environ.get('SESSION_SECRET', secrets.token_hex(32))
+
 def create_app():
     app = Flask(__name__)
+    app.secret_key = SESSION_SECRET
     CORS(app)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(process_bp)
     app.register_blueprint(manager_controller)
     return app
@@ -32,28 +40,42 @@ def autostart_task():
     session = db.get_session()
     from http_request_util.data_syn_controller import syn_task_data
     from models.task_return import TaskReturn
+    failed_tasks = []
     try:
         search_task = session.query(TaskConfig).all()
         for task in search_task:
-            task.action = 1
-            start_task_process(task, task.port)
-            session.add(task)
-            session.commit()
-            session.refresh(task)
-            task_return = TaskReturn()
-            task_return.camId = task.cam1_id
-            task_return.id = task.cam1_id
-            task_return.pid = task.pid
-            task_return.stream_url = task.url
-            task_return.stream_port = task.port                
-            task_return.event_port = task.event_port  
-            syn_task_data(task_return.to_dict())
-            time.sleep(1)
-    except Exception:
-        session.rollback()
-        raise
+            try:
+                task.action = 1
+                start_task_process(task, task.port)
+                session.add(task)
+                session.commit()
+                session.refresh(task)
+
+                task_return = TaskReturn()
+                task_return.camId = task.cam1_id
+                task_return.id = task.cam1_id
+                task_return.pid = task.pid
+                task_return.stream_url = task.url
+                task_return.stream_port = task.port
+                task_return.event_port = task.event_port
+
+                try:
+                    syn_task_data(task_return.to_dict())
+                except Exception as exc:
+                    print(f'[bootstrap] sync task data failed: task={task.taskname}, error={exc}')
+
+                time.sleep(1)
+            except Exception as exc:
+                session.rollback()
+                failed_tasks.append((task.taskname, str(exc)))
+                print(f'[bootstrap] autostart task failed: task={task.taskname}, error={exc}')
     finally:
         session.close()
+
+    if failed_tasks:
+        print(f'[bootstrap] autostart finished with {len(failed_tasks)} failed task(s)')
+
+    return failed_tasks
 def clean_tasktable():
     db = dbconn.DBConn()
     session = db.get_session()
@@ -79,12 +101,21 @@ def start_background_services():
     except RuntimeError as exc:
         print(f'[bootstrap] cleanup daemon not started: {exc}')
 
+    try:
+        start_udp_listener()
+        print('[bootstrap] UDP listener started successfully')
+    except Exception as exc:
+        print(f'[bootstrap] UDP listener not started: {exc}')
+
 
 app = create_app()
 
 
 def bootstrap_services():
     """启动后端守护任务与任务恢复流程。"""
+    # 初始化默认管理员账号
+    init_default_user()
+    
     autostart_task()
     # syn_task()
     start_background_services()

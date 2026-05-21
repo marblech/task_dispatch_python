@@ -18,7 +18,8 @@ TEMP_MODEL_MARKER = '-tasktmp-'
 PORT_RANGE_START = 30000
 PORT_RANGE_END = 40000
 #TASK_CONTAINER_IMAGE = 'feng_dian_ar_deploy'
-TASK_CONTAINER_IMAGE = 'ascend_dev_debug'
+# TASK_CONTAINER_IMAGE = 'ascend_dev_debug'
+TASK_CONTAINER_IMAGE = 'task_condition_docker'
 
 def get_ini_filepath(name):
     ts = time.strftime("%Y%m%d-%H%M%S")
@@ -115,10 +116,47 @@ def _assign_available_ports(task: TaskConfig, preferred_port: int | None = None)
     task.port = new_port
     task.event_port = new_port + 1
 
+
+def _assign_available_udp_port(task: TaskConfig, preferred_udp_port: int | None = None):
+    """
+    动态分配一个可用的UDP端口并保存到 task.udp_port
+    """
+    docker_reserved_ports = port_helper.get_docker_published_host_ports()
+
+    if preferred_udp_port is not None:
+        # 优先使用指定的UDP端口
+        if port_helper.is_host_udp_port_available(
+            preferred_udp_port,
+            docker_reserved_ports=docker_reserved_ports,
+        ):
+            task.udp_port = preferred_udp_port
+            return
+        else:
+            print(f'requested UDP port {preferred_udp_port} unavailable, selecting a new available UDP port')
+
+    # 从PORT_RANGE_START开始寻找可用的UDP端口
+    for udp_port in range(PORT_RANGE_START, PORT_RANGE_END):
+        if port_helper.is_host_udp_port_available(
+            udp_port,
+            docker_reserved_ports=docker_reserved_ports,
+        ):
+            task.udp_port = udp_port
+            return
+
+    raise RuntimeError(
+        f'no available UDP port found in range {PORT_RANGE_START}-{PORT_RANGE_END}'
+    )
+
 def start_task_process(task:TaskConfig,port=None):
     try:
         _assign_available_ports(task, preferred_port=port)
         port = task.port
+        
+        # 动态分配UDP端口并保存到 task.udp_port
+        _assign_available_udp_port(task)
+        udp_port = task.udp_port
+        print(f'Assigned UDP port: {udp_port} for task {task.taskname}')
+        
         # cmd = '/app/qiang_qiu_lian_dong_deploy/hello_test'
         
         ini_fullpath = Path(get_ini_filepath('config'))
@@ -224,7 +262,7 @@ def start_task_process(task:TaskConfig,port=None):
         #     IniFileHelper.set_value("SystemSettings","device_id",str(task.cameras[1].deviceid),ini_fullpath)   
         
         ts = datetime.now().strftime("%Y%m%d%H%M%S")
-        host_log_dir = Path('/home/marblech/webapi/logs')
+        host_log_dir = Path('/data/webapi/logs')
         host_log_dir.mkdir(parents=True, exist_ok=True)
         container_log_file = f'/data/webapi/logs/{task.taskname}_{ts}.log'
 
@@ -241,7 +279,7 @@ def start_task_process(task:TaskConfig,port=None):
                                 # 'mkdir -p /data/webapi/logs && '
                f'exec {shlex.quote(binary_path)} '
                f'--conf {shlex.quote(str(ini_fullpath))} '
-               f'>> {shlex.quote(container_log_file)} 2>&1'
+            #    f'>> {shlex.quote(container_log_file)} 2>&1'
             ),
         ]
 
@@ -251,19 +289,28 @@ def start_task_process(task:TaskConfig,port=None):
             if task.port is None or task.event_port is None:
                 raise ValueError('task port or event_port is not set')
 
+            # 构建 TCP 端口映射列表
+            port_mappings = [
+                f'{task.port}:{task.port}',
+                f'{task.event_port}:{task.event_port}',
+            ]
+            
+            # 构建 UDP 端口映射列表
+            udp_port_mappings = [
+                f'{task.udp_port}:{task.udp_port}',
+            ]
+
             container = docker_helper.docker_run(
                 image=TASK_CONTAINER_IMAGE,
                 cmd=cmd,
                 detach=True,
-                remove=True,
+                remove=False,
                 verify_running=True,
                 startup_timeout=5,
                 name=task.taskname,
-                ports=[
-                    f'{task.port}:{task.port}',
-                    f'{task.event_port}:{task.event_port}',
-                ],
-                volumes={'/data/marble_chen2/video_ar_app_deploy_docker_task': {'bind': '/data', 'mode': 'rw'}},
+                ports=port_mappings,
+                udp_ports=udp_port_mappings,
+                volumes={'/home/marblech': {'bind': '/data', 'mode': 'rw'}},
             )
             # When detached, docker_helper returns a container object; use its id as pid
             pid = getattr(container, 'id', None)
@@ -275,12 +322,17 @@ def start_task_process(task:TaskConfig,port=None):
             elif pid is not None and not isinstance(pid, str):
                 pid = str(pid)
         except Exception as e:
-            raise Exception(f'failed to start docker container: {e}')
+            raise Exception(
+                'failed to start docker container: '
+                f'{e}; host_log_file={container_log_file}; '
+                f'tcp_ports={task.port}/{task.event_port}; udp_port={task.udp_port}'
+            )
         task.pid = pid
         # task.resnet_file = str(dst_trk_onnx)
         task.yolo_file = str(dst_det_onnx)
         task.ini_file = str(ini_fullpath)
         task.port = port
+        # udp_port 已在之前分配到 task.udp_port
         return task
     except Exception as e:
         raise Exception(f'create task fail reason: {e}')

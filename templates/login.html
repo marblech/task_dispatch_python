@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 &#8212; WebAPI 管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f0f1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: #fff;
+            border: 1px solid #c3c4c7;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border-radius: 8px;
+            width: 320px;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .login-logo {
+            margin-bottom: 20px;
+        }
+        
+        .login-logo img {
+            max-width: 84px;
+            height: auto;
+        }
+        
+        .login-logo-text {
+            font-size: 28px;
+            font-weight: 600;
+            color: #23282d;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .login-headline {
+            margin-bottom: 24px;
+        }
+        
+        .login-headline h1 {
+            font-size: 20px;
+            font-weight: 400;
+            color: #1d2327;
+            line-height: 1.4;
+        }
+        
+        .login-headline h1 a {
+            color: #2271b1;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .login-headline h1 a:hover {
+            color: #135e96;
+            text-decoration: underline;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 400;
+            color: #1d2327;
+            margin-bottom: 6px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 16px;
+            border: 1px solid #8c8f94;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.1s;
+            box-shadow: 0 0 0 transparent;
+        }
+        
+        .form-group input:focus {
+            border-color: #2271b1;
+            box-shadow: 0 0 0 1px #2271b1;
+            outline: none;
+        }
+        
+        .login-btn {
+            width: 100%;
+            height: 36px;
+            background: #2271b1;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.1s;
+            margin-top: 8px;
+        }
+        
+        .login-btn:hover {
+            background: #135e96;
+        }
+        
+        .login-btn:active {
+            background: #0a4b7b;
+        }
+        
+        .login-btn:disabled {
+            background: #8c8f94;
+            cursor: default;
+        }
+        
+        .login-btn .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+        
+        .login-btn.loading .btn-text {
+            display: none;
+        }
+        
+        .login-btn.loading .spinner {
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .login-message {
+            margin-top: 16px;
+            min-height: 20px;
+        }
+        
+        .message-error {
+            background: #fcf0f1;
+            border-left: 4px solid #d63638;
+            padding: 12px 14px;
+            border-radius: 4px;
+            color: #d63638;
+            font-size: 14px;
+            text-align: left;
+        }
+        
+        .message-success {
+            background: #f0f6fc;
+            border-left: 4px solid #2271b1;
+            padding: 12px 14px;
+            border-radius: 4px;
+            color: #2271b1;
+            font-size: 14px;
+            text-align: left;
+        }
+        
+        .login-footer {
+            margin-top: 24px;
+            text-align: center;
+        }
+        
+        .login-footer a {
+            color: #2271b1;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        
+        .login-footer a:hover {
+            color: #135e96;
+            text-decoration: underline;
+        }
+        
+        .pwd-toggle {
+            position: relative;
+        }
+        
+        .pwd-toggle input {
+            padding-right: 42px;
+        }
+        
+        .pwd-toggle-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #8c8f94;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .pwd-toggle-btn:hover {
+            color: #1d2327;
+            background: #f0f0f1;
+        }
+        
+        .footer-text {
+            margin-top: 20px;
+            color: #78787c;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-logo">
+            <span class="login-logo-text">WebAPI</span>
+        </div>
+        
+        <div class="login-headline">
+            <h1><a href="#">管理系统</a></h1>
+        </div>
+        
+        <form id="loginForm" method="post">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required autofocus autocomplete="username" placeholder="请输入用户名">
+            </div>
+            
+            <div class="form-group pwd-toggle">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
+                <button type="button" class="pwd-toggle-btn" id="togglePwd" title="显示/隐藏密码">显示</button>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span class="btn-text">登录</span>
+                <span class="spinner"></span>
+            </button>
+        </form>
+        
+        <div class="login-message" id="loginMessage"></div>
+        
+        <div class="login-footer">
+            <a href="#">忘记密码？</a>
+        </div>
+    </div>
+    
+    <p class="footer-text">性能优异 · 稳定可靠</p>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+            const loginMessage = document.getElementById('loginMessage');
+            const togglePwd = document.getElementById('togglePwd');
+            const passwordInput = document.getElementById('password');
+            
+            // 密码显示/隐藏切换
+            togglePwd.addEventListener('click', function() {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    togglePwd.textContent = '隐藏';
+                } else {
+                    passwordInput.type = 'password';
+                    togglePwd.textContent = '显示';
+                }
+            });
+            
+            // 表单提交
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                
+                if (!username || !password) {
+                    showMessage('请输入用户名和密码', 'error');
+                    return;
+                }
+                
+                // 设置加载状态
+                loginBtn.classList.add('loading');
+                loginBtn.disabled = true;
+                loginMessage.innerHTML = '';
+                
+                // 发送AJAX请求
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loginBtn.classList.remove('loading');
+                    loginBtn.disabled = false;
+                    
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        setTimeout(function() {
+                            window.location.href = data.redirect || '/manager';
+                        }, 500);
+                    } else {
+                        showMessage(data.message || '登录失败，请检查用户名和密码', 'error');
+                    }
+                })
+                .catch(error => {
+                    loginBtn.classList.remove('loading');
+                    loginBtn.disabled = false;
+                    showMessage('网络错误，请稍后重试', 'error');
+                    console.error('Login error:', error);
+                });
+            });
+            
+            function showMessage(message, type) {
+                loginMessage.innerHTML = '<div class="message-' + type + '">' + message + '</div>';
+            }
+            
+            // 检查登录状态
+            fetch('/api/auth/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        window.location.href = '/manager';
+                    }
+                })
+                .catch(err => console.error('Check auth status error:', err));
+        });
+    </script>
+</body>
+</html>

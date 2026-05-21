@@ -41,10 +41,10 @@ $(document).ready(function () {
                    tasks.forEach(task => {
                        tbody.append(`
                            <tr data-task-id="${task.id}">
-                               <td class="ms-Table-cell">${task.id}</td>
-                               <td class="ms-Table-cell">${task.taskname || ''}</td>
-                               <td class="ms-Table-cell">${task.pid || ''}</td>
-                               <td class="ms-Table-cell">${task.create_time || ''}</td>
+                                <td class="ms-Table-cell">${task.id}</td>
+                                <td class="ms-Table-cell">${task.taskname || ''}</td>
+                                <td class="ms-Table-cell">${task.udp_port !== null && task.udp_port !== undefined ? task.udp_port : ''}</td>
+                                <td class="ms-Table-cell">${task.create_time || ''}</td>
                                <td class="ms-Table-cell">${task.port || ''}</td>  
                                <td class="ms-Table-cell">${task.cam1_ip || ''}</td>
                                <td class="ms-Table-cell">${task.cam1_username || ''}</td>

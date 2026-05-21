@@ -52,6 +52,7 @@ class TaskConfig(Base):
     cam1_username: Mapped[Optional[str]] = mapped_column(String(1000))
     cam1_password: Mapped[Optional[str]] = mapped_column(String(1000))
     cam1_ip: Mapped[Optional[str]] = mapped_column(String(1000))
+    udp_port: Mapped[Optional[int]] = mapped_column(Integer)
     cam2_username: Mapped[Optional[str]] = mapped_column(String(1000))
     cam2_password: Mapped[Optional[str]] = mapped_column(String(1000))
     cam2_ip: Mapped[Optional[str]] = mapped_column(String(1000))

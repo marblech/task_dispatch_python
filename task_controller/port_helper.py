@@ -19,7 +19,8 @@ def get_docker_published_host_ports() -> set[int]:
         used_ports: set[int] = set()
         for container in client.containers.list():
             try:
-                ports = container.attrs.get('NetworkSettings', {}).get('Ports', {}) or {}
+                inspected_container = client.containers.get(container.id)
+                ports = inspected_container.attrs.get('NetworkSettings', {}).get('Ports', {}) or {}
             except Exception:
                 ports = {}
 
@@ -102,6 +103,40 @@ def _get_host_gateway() -> str:
 
         # Fallback to common default docker bridge address
         return "172.17.0.1"
+
+
+def is_host_udp_port_available(
+    port: int,
+    timeout: float = 0.15,
+    host: Optional[str] = None,
+    docker_reserved_ports: Optional[set[int]] = None,
+) -> bool:
+    """
+    Check if a UDP port is available on the host.
+    
+    This function checks if the UDP port is not in use by Docker containers
+    and attempts to bind to it to verify availability.
+    """
+    reserved_ports = docker_reserved_ports
+    if reserved_ports is None:
+        reserved_ports = get_docker_published_host_ports()
+
+    if int(port) in reserved_ports:
+        return False
+
+    if not _running_in_container():
+        # For local testing, try to bind
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind(('0.0.0.0', int(port)))
+            return True
+        except OSError:
+            return False
+
+    # In container, we can't reliably check UDP port availability remotely
+    # Fall back to checking if it's in Docker's reserved ports
+    return int(port) not in reserved_ports
 
 
 def is_host_port_available(

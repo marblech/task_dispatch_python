@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 import os
 from pathlib import Path
@@ -13,6 +13,9 @@ class DBConn:
         return cls._instance
 
     def __init__(self):
+        if getattr(self, '_initialized', False):
+            return
+
         # 获取数据库路径
         db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'db')
         self.db_path = os.path.join(db_dir, 'task.db')
@@ -31,6 +34,32 @@ class DBConn:
         # 创建线程安全的会话工厂
         self.session_factory = sessionmaker(bind=self.engine)
         self.Session = scoped_session(self.session_factory)
+        self._initialize_schema()
+        self._initialized = True
+
+    def _initialize_schema(self):
+        self._ensure_user_table()
+        self._ensure_sqlite_column('usertable', 'salt', "TEXT DEFAULT ''")
+
+    def _ensure_user_table(self):
+        from models.user import UserTable
+
+        UserTable.__table__.create(self.engine, checkfirst=True)
+
+    def _get_sqlite_columns(self, table_name: str) -> set[str]:
+        with self.engine.connect() as conn:
+            result = conn.execute(text(f'PRAGMA table_info({table_name})'))
+            return {str(row[1]) for row in result}
+
+    def _ensure_sqlite_column(self, table_name: str, column_name: str, column_sql: str):
+        existing_columns = self._get_sqlite_columns(table_name)
+        if not existing_columns or column_name in existing_columns:
+            return
+
+        with self.engine.begin() as conn:
+            conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}'))
+
+        print(f'[db] migrated {table_name}: added column {column_name}')
 
     def get_session(self):
         """获取数据库会话"""

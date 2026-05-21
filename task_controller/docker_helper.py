@@ -240,7 +240,7 @@ def create_container(image: str, name: str | None, cmd: str, detach: bool = True
 
 def docker_run(image: str, cmd: str | list[str] | None = None, name: str | None = None,
                              detach: bool = False, remove: bool = False,
-                             ports: list | None = None, volumes: list | dict | None = None,
+                             ports: list | None = None, udp_ports: list | None = None, volumes: list | dict | None = None,
                              envs: list | None = None, tty: bool = True, interactive: bool = True,
                              privileged: bool = True, verify_running: bool = False,
                              startup_timeout: float = 0):
@@ -266,9 +266,8 @@ def docker_run(image: str, cmd: str | list[str] | None = None, name: str | None 
     client = get_client()
     pull_image_with_progress(client, image)
 
-    port_map = None
+    port_map = {}
     if ports:
-        port_map = {}
         for p in ports:
             if ":" not in p:
                 print(f"Ignoring invalid port mapping: {p}")
@@ -276,6 +275,19 @@ def docker_run(image: str, cmd: str | list[str] | None = None, name: str | None 
             host, container = p.split(":", 1)
             # normalize container port with tcp
             key = f"{container}/tcp"
+            try:
+                port_map[key] = int(host)
+            except ValueError:
+                port_map[key] = host
+
+    if udp_ports:
+        for p in udp_ports:
+            if ":" not in p:
+                print(f"Ignoring invalid UDP port mapping: {p}")
+                continue
+            host, container = p.split(":", 1)
+            # normalize container port with udp
+            key = f"{container}/udp"
             try:
                 port_map[key] = int(host)
             except ValueError:
@@ -308,7 +320,7 @@ def docker_run(image: str, cmd: str | list[str] | None = None, name: str | None 
             name=name,
             detach=detach,
             remove=remove,
-            ports=port_map,
+            ports=port_map if port_map else None,
             volumes=volume_map,
             environment=env_map,
             tty=tty,
@@ -341,7 +353,7 @@ def docker_run(image: str, cmd: str | list[str] | None = None, name: str | None 
                 name=name,
                 detach=detach,
                 remove=remove,
-                ports=port_map,
+                ports=port_map if port_map else None,
                 volumes=volume_map,
                 environment=env_map,
                 tty=tty,
