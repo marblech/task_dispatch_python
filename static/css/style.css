@@ -1,0 +1,206 @@
+/* 设置按钮容器为 flex 布局 */
+.button-container {
+    display: flex; /* 使用 flexbox 布局 */
+ /*   justify-content: space-between; /* 按钮之间均匀分隔 */
+    align-items: center; /* 垂直居中对齐 */
+    padding: 20px; /* 内部间距 */
+    gap: 20px; /* 按钮之间的间距 */
+}
+
+/* 设置按钮项的样式 */
+.button-item {
+    flex: 1; /* 每个按钮占据相等的宽度 */
+    /* text-align: center; /* 按钮居中对齐 */
+}
+
+/* 表格样式调整 */
+.ms-Table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.ms-Table th, .ms-Table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.ms-Table th {
+    background-color: #f3f2f1;
+    font-weight: bold;
+}
+
+/* 设置按钮行的布局 */
+.button-row {
+    display: flex; /* 使用 flexbox 布局 */
+   /* justify-content: space-between; /* 按钮之间均匀分隔 */
+    align-items: center; /* 垂直居中对齐 */
+    margin: 20px 0; /* 上下间距 */
+}
+
+/* 设置按钮项的样式 */
+.button-item {
+    flex: 1; /* 每个按钮占据相等的宽度 */
+    /* text-align: center; /* 按钮居中对齐 */
+}
+
+/* 如果需要更精确的按钮对齐 */
+.button-item:first-child {
+    text-align: left; /* 左侧按钮左对齐 */
+}
+
+.button-item:last-child {
+    text-align: right; /* 右侧按钮右对齐 */
+}
+
+/* 模态层背景 */
+.modal {
+    display: none; /* 默认隐藏 */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+}
+
+/* 模态层内容 */
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto; /* 垂直居中 */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 40%; /* 宽度 */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 关闭按钮 */
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+}
+
+/* 按钮行的布局 */
+.button-row {
+    display: flex; /* 使用 flexbox 布局 */
+ /*   justify-content: space-between; /* 按钮之间均匀分隔 */
+    align-items: center; /* 垂直居中对齐 */
+    margin: 20px 0; /* 上下间距 */
+}
+
+/* 按钮项的样式 */
+.button-item {
+    flex: 1; /* 每个按钮占据相等的宽度 */
+   /* text-align: center; /* 按钮居中对齐 */
+}
+
+/* 左侧按钮左对齐 */
+.button-item:first-child {
+    text-align: left;
+}
+
+/* 右侧按钮右对齐 */
+.button-item:last-child {
+    text-align: right;
+}
+
+/* 表格样式 */
+.ms-Table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.ms-Table th, .ms-Table td {
+    padding: 10px;
+    text-align: center; /* 水平居中 */
+    vertical-align: middle; /* 垂直居中 */
+    border: 1px solid #e1e1e1; /* 添加边框 */
+}
+
+.ms-Table th {
+    background-color: #f3f2f1;
+    font-weight: bold;
+}
+
+/* 操作按钮样式 */
+.action-btn {
+    margin: 0 5px; /* 按钮之间的间距 */
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.ms-Button--danger {
+    background-color: #d9534f;
+    color: white;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.photo-item {
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+    background: #fff;
+}
+
+.photo-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}
+
+.photo-checkbox {
+    opacity: 0.8;
+    width: 20px;
+    height: 20px;
+}
+
+.gallery-actions {
+    margin-bottom: 15px;
+}
+
+.thumbnail {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.dropzone .dz-preview .dz-success-mark,
+.dropzone .dz-preview .dz-error-mark {
+    pointer-events: auto !important;
+    z-index: 1000 !important;
+    opacity: 1 !important;
+}
+
+.dropzone .dz-preview .dz-remove {
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+}
+
+/* 确保预览框不被其他元素覆盖 */
+.dropzone .dz-preview {
+    z-index: 99 !important;
+    position: relative !important;
+}

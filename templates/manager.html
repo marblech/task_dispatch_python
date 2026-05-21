@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务服务管理</title>
+    <!-- 引入 Fluent UI 样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fabric.min.css') }}">
+    <!-- 引入自定义样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="ms-Fabric">
+    <header class="ms-bgColor-themePrimary ms-fontColor-white ms-font-xl ms-textAlign-center ms-fontWeight-semibold ms-Grid">
+        <h4>任务服务管理</h4>
+    </header>
+    <main class="ms-Grid main-container">
+        <table class="ms-Table" id="task-list">
+            <thead>
+                <tr>
+                    <th class="ms-Table-cell" style="width: 100px;">任务ID</th>
+                    <th class="ms-Table-cell">任务名称</th>
+                    <th class="ms-Table-cell">进程ID</th>
+                    <th class="ms-Table-cell">创建时间</th>
+                    <th class="ms-Table-cell">视频端口</th>                                        
+                    <th class="ms-Table-cell">摄像机1_ip</th>
+                    <th class="ms-Table-cell">摄像机1_用户名</th>
+                    <th class="ms-Table-cell">摄像机1_密码</th>
+                    <th class="ms-Table-cell">视频URL</th>
+                    <th class="ms-Table-cell">事件端口</th>
+                    <th class="ms-Table-cell">操作</th>
+                    <!-- <th class="ms-Table-cell">摄像机2_ip</th>
+                    <th class="ms-Table-cell">摄像机2_用户名</th>
+                    <th class="ms-Table-cell">摄像机2_密码</th>
+                    <th class="ms-Table-cell">摄像机2_类型</th> -->
+                    
+                </tr>
+            </thead>
+            <tbody id="task-list-body">
+                <tr id="loading-row">
+                    <td class="ms-Table-cell" colspan="12" style="text-align: center;">加载中...</td>
+                </tr>
+               
+            </tbody>
+        </table>
+    </main>
+     <!-- 引入 jQuery -->
+     <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
+</body>
+</html>
