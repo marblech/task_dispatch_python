@@ -5,6 +5,7 @@ from db import dbconn
 from datetime import datetime  # 添加 datetime 模块
 import json
 import os
+from flask import session, redirect
 
 def response_json(code, msg, data=None):
     msg = {
@@ -14,6 +15,18 @@ def response_json(code, msg, data=None):
     }
     return Response(json.dumps(msg,ensure_ascii=False),mimetype='application/json')
 
+def login_required(f):
+    """登录验证装饰器"""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            if request.is_json or request.headers.get('Accept') == 'application/json':
+                return jsonify({'success': False, 'message': '请先登录', 'redirect': '/login'}), 401
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
 manager_controller = Blueprint('manager', __name__)
 
 @manager_controller.route('/favicon.ico')
@@ -21,15 +34,17 @@ def favicon():
     return make_response('', 204)  # 返回空响应，状态码 204 表示无内容
 
 @manager_controller.route('/list',methods=['GET'])
+@login_required
 def task_list():
     return render_template('manager.html')
 
 @manager_controller.route('/task_list',methods=['GET'])
+@login_required
 def get_task_list():
     db = dbconn.DBConn()
-    session = db.get_session()
+    session_db = db.get_session()
     try:
-        task_list = session.query(TaskConfig).all()
+        task_list = session_db.query(TaskConfig).all()
         tasks = [{
             "id": task.id,
             "taskname": task.taskname,
@@ -49,14 +64,17 @@ def get_task_list():
         return response_json(200,'查询成功',tasks)
     except Exception as e:
         return response_json(500,'查询失败',str(e))
+    finally:
+        session_db.close()
 
 
 @manager_controller.route('/task/<string:task_id>', methods=['GET'])
+@login_required
 def get_task_detail(task_id):
     db = dbconn.DBConn()
-    session = db.get_session()
+    session_db = db.get_session()
     try:
-        task = session.query(TaskConfig).filter_by(id=task_id).first()
+        task = session_db.query(TaskConfig).filter_by(id=task_id).first()
         if not task:
             return response_json(404, '任务不存在')
         return response_json(200, '查询成功', {
@@ -73,3 +91,5 @@ def get_task_detail(task_id):
         })
     except Exception as e:
         return response_json(500, '查询失败', str(e))
+    finally:
+        session_db.close()

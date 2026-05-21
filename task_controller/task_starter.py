@@ -20,6 +20,7 @@ PORT_RANGE_END = 40000
 #TASK_CONTAINER_IMAGE = 'feng_dian_ar_deploy'
 # TASK_CONTAINER_IMAGE = 'ascend_dev_debug'
 TASK_CONTAINER_IMAGE = 'task_condition_docker'
+CONTAINER_MOUNT_DIR = f'/home/marblech'
 
 def get_ini_filepath(name):
     ts = time.strftime("%Y%m%d-%H%M%S")
@@ -279,7 +280,7 @@ def start_task_process(task:TaskConfig,port=None):
                                 # 'mkdir -p /data/webapi/logs && '
                f'exec {shlex.quote(binary_path)} '
                f'--conf {shlex.quote(str(ini_fullpath))} '
-            #    f'>> {shlex.quote(container_log_file)} 2>&1'
+               f'>> {shlex.quote(container_log_file)} 2>&1'
             ),
         ]
 
@@ -310,7 +311,7 @@ def start_task_process(task:TaskConfig,port=None):
                 name=task.taskname,
                 ports=port_mappings,
                 udp_ports=udp_port_mappings,
-                volumes={'/home/marblech': {'bind': '/data', 'mode': 'rw'}},
+                volumes={CONTAINER_MOUNT_DIR : {'bind': '/data', 'mode': 'rw'}},
             )
             # When detached, docker_helper returns a container object; use its id as pid
             pid = getattr(container, 'id', None)

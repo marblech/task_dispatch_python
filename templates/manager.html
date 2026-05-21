@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +8,53 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fabric.min.css') }}">
     <!-- 引入自定义样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .logout-container {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 6px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .user-info {
+            position: absolute;
+            right: 180px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-size: 14px;
+        }
+        .main-container {
+            margin-top: 60px;
+            padding: 20px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+        }
+    </style>
 </head>
 <body class="ms-Fabric">
-    <header class="ms-bgColor-themePrimary ms-fontColor-white ms-font-xl ms-textAlign-center ms-fontWeight-semibold ms-Grid">
+    <header class="ms-bgColor-themePrimary ms-fontColor-white ms-font-xl ms-textAlign-center ms-fontWeight-semibold ms-Grid" style="position: relative;">
         <h4>任务服务管理</h4>
+        <div class="user-info" id="userInfo"></div>
+        <div class="logout-container">
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
     </header>
     <main class="ms-Grid main-container">
+        <div class="table-wrapper">
         <table class="ms-Table" id="task-list">
             <thead>
                 <tr>
@@ -40,9 +81,48 @@
                     <td class="ms-Table-cell" colspan="12" style="text-align: center;">加载中...</td>
                 </tr>
                
-            </tbody>
+         </tbody>
         </table>
+        </div>
     </main>
+
+    <script>
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态
+            fetch('/api/auth/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.logged_in) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    // 显示用户名
+                    document.getElementById('userInfo').textContent = '欢迎, ' + (data.username || '用户');
+                })
+                .catch(err => {
+                    console.error('Check auth status error:', err);
+                    window.location.href = '/login';
+                });
+
+            // 退出登录按钮
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    window.location.href = '/login';
+                })
+                .catch(err => {
+                    window.location.href = '/login';
+                });
+            });
+        });
+    </script>
      <!-- 引入 jQuery -->
      <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
      <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
