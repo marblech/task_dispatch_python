@@ -87,8 +87,16 @@ class UDPUdpListener:
         """处理单个 UDP 报文：查询 cam1_ip，转发到对应端口。"""
         source_ip = client_addr[0]
         source_port = client_addr[1]
+        packet_hex = data.hex(' ')
 
-        logger.debug(f'Received UDP packet from {source_ip}:{source_port}, size={len(data)} bytes')
+        logger.info(
+            'Received UDP packet from %s:%s, size=%s bytes, raw=%r, hex=%s',
+            source_ip,
+            source_port,
+            len(data),
+            data,
+            packet_hex,
+        )
 
         # 查询数据库中 cam1_ip 匹配的记录，获取 udp_port
         udp_port = self._lookup_udp_port(source_ip)

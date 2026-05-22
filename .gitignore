@@ -36,3 +36,7 @@ Thumbs.db
 
 # Configuration files with sensitive data
 config.ini
+
+cam_wind/
+cam_wind/*
+cam_wind/**

@@ -194,12 +194,12 @@
             text-decoration: underline;
         }
         
-        .pwd-toggle {
+        .pwd-input-wrap {
             position: relative;
         }
         
-        .pwd-toggle input {
-            padding-right: 42px;
+        .pwd-input-wrap input {
+            padding-right: 44px;
         }
         
         .pwd-toggle-btn {
@@ -210,17 +210,28 @@
             background: none;
             border: none;
             cursor: pointer;
-            color: #8c8f94;
-            font-size: 13px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            line-height: 1;
-            white-space: nowrap;
+            padding: 4px;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .pwd-toggle-btn:hover {
-            color: #1d2327;
             background: #f0f0f1;
+        }
+        
+        .pwd-toggle-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 1px #2271b1;
+        }
+        
+        .pwd-toggle-btn img {
+            width: 18px;
+            height: 18px;
+            display: block;
         }
         
         .footer-text {
@@ -249,8 +260,12 @@
             
             <div class="form-group pwd-toggle">
                 <label for="password">密码</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
-                <button type="button" class="pwd-toggle-btn" id="togglePwd" title="显示/隐藏密码">显示</button>
+                <div class="pwd-input-wrap">
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
+                    <button type="button" class="pwd-toggle-btn" id="togglePwd" title="显示密码" aria-label="显示密码" aria-pressed="false">
+                        <img id="togglePwdIcon" src="{{ url_for('static', filename='img/eye-open.svg') }}" alt="显示密码图标">
+                    </button>
+                </div>
             </div>
             
             <button type="submit" class="login-btn" id="loginBtn">
@@ -275,15 +290,26 @@
             const loginMessage = document.getElementById('loginMessage');
             const togglePwd = document.getElementById('togglePwd');
             const passwordInput = document.getElementById('password');
+            const togglePwdIcon = document.getElementById('togglePwdIcon');
+            const eyeOpenIcon = "{{ url_for('static', filename='img/eye-open.svg') }}";
+            const eyeClosedIcon = "{{ url_for('static', filename='img/eye-closed.svg') }}";
             
             // 密码显示/隐藏切换
             togglePwd.addEventListener('click', function() {
                 if (passwordInput.type === 'password') {
                     passwordInput.type = 'text';
-                    togglePwd.textContent = '隐藏';
+                    togglePwd.title = '隐藏密码';
+                    togglePwd.setAttribute('aria-label', '隐藏密码');
+                    togglePwd.setAttribute('aria-pressed', 'true');
+                    togglePwdIcon.src = eyeClosedIcon;
+                    togglePwdIcon.alt = '隐藏密码图标';
                 } else {
                     passwordInput.type = 'password';
-                    togglePwd.textContent = '显示';
+                    togglePwd.title = '显示密码';
+                    togglePwd.setAttribute('aria-label', '显示密码');
+                    togglePwd.setAttribute('aria-pressed', 'false');
+                    togglePwdIcon.src = eyeOpenIcon;
+                    togglePwdIcon.alt = '显示密码图标';
                 }
             });
             
