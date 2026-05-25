@@ -97,15 +97,45 @@ def _restart_task_from_record(session, task: TaskConfig):
     new_task.cam2_type = task.cam2_type
     new_task.region_str = task.region_str
     new_task.cameras_str = task.cameras_str
+    new_task.udp_port = task.udp_port
+    new_task.port = task.port
+    new_task.event_port = task.event_port
+    new_task.test_mode = task.test_mode
     new_task.status = 1
     new_task.action = 1
-    new_task.port = get_port()
-    new_task.event_port = new_task.port + 1
     new_task = start_task_process(new_task, new_task.port)
     new_task.region = []
     new_task.cameras = []
     session.add(new_task)
     session.commit()
+    return new_task
+
+
+def _build_task_return_from_task(task: TaskConfig):
+    task_return = TaskReturn()
+    task_return.camId = task.cam1_id
+    task_return.id = task.cam1_id
+    task_return.pid = task.pid
+    task_return.stream_url = task.url
+    task_return.stream_port = task.port
+    task_return.event_port = task.event_port
+    return task_return
+
+
+def restart_task_with_existing_record(session, task: TaskConfig):
+    if task.pid:
+        try:
+            _stop_pid_flexible(task.pid)
+        except Exception:
+            pass
+
+    _delete_task_files(task)
+    session.delete(task)
+    session.commit()
+
+    new_task = _restart_task_from_record(session, task)
+    from http_request_util.data_syn_controller import syn_task_data
+    syn_task_data(_build_task_return_from_task(new_task).to_dict())
     return new_task
 
 
@@ -410,26 +440,7 @@ def restart_task_from_record(task_id):
         if not task:
             return response_json(404, '任务不存在')
 
-        if task.pid:
-            try:
-                _stop_pid_flexible(task.pid)
-            except Exception:
-                pass
-
-        _delete_task_files(task)
-        session.delete(task)
-        session.commit()
-
-        new_task = _restart_task_from_record(session, task)
-        task_return = TaskReturn()
-        task_return.camId = new_task.cam1_id
-        task_return.id = new_task.cam1_id
-        task_return.pid = new_task.pid
-        task_return.stream_url = new_task.url
-        task_return.stream_port = new_task.port                
-        task_return.event_port = new_task.event_port 
-        from http_request_util.data_syn_controller import syn_task_data
-        syn_task_data(task_return.to_dict()) 
+        new_task = restart_task_with_existing_record(session, task)
         return response_json(200, '重启成功', {
             'id': new_task.id,
             'pid': new_task.pid,

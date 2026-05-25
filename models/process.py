@@ -62,6 +62,7 @@ class TaskConfig(Base):
     cam1_id: Mapped[str] = mapped_column(String(100))
     cam2_id: Mapped[str] = mapped_column(String(100))
     event_port: Mapped[Optional[int]] = mapped_column(Integer)
+    test_mode: Mapped[Optional[int]] = mapped_column(Integer)
     # region: Mapped[Optional[str]] = mapped_column(String(5000))
     
     # cameras: Mapped[Optional[str]] = mapped_column(String(1000))

@@ -1,25 +1,204 @@
 $(document).ready(function () {
+    const taskCache = {};
+    const pendingTaskActions = {};
+    let toastTimer = null;
+    let confirmResolver = null;
+
+    function initializeAuthState() {
+        fetch('/api/auth/status')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.logged_in) {
+                    window.location.href = '/login';
+                    return;
+                }
+                $('#userInfo').text(`欢迎, ${data.username || '用户'}`);
+            })
+            .catch(error => {
+                console.error('Check auth status error:', error);
+                window.location.href = '/login';
+            });
+    }
+
+    function bindLogoutAction() {
+        $('#logoutBtn').on('click', function () {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => {
+                    window.location.href = '/login';
+                })
+                .catch(() => {
+                    window.location.href = '/login';
+                });
+        });
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderActionButtons(taskId) {
+        const isPending = Boolean(pendingTaskActions[String(taskId)]);
+        const disabledAttr = isPending ? 'disabled aria-disabled="true"' : '';
+        const disabledClass = isPending ? ' is-disabled' : '';
         return `
-            <button class="ms-Button ms-Button--primary js-stop-task" data-task-id="${taskId}">结束</button>
-            <button class="ms-Button ms-Button--default js-restart-task" data-task-id="${taskId}" style="margin-left: 8px;">重启</button>
+            <div class="action-btn-group">
+                <button class="task-action-btn task-action-btn--modify js-edit-task" data-task-id="${taskId}" type="button">
+                    <span class="task-action-btn__icon ms-Icon ms-Icon--EditNote" aria-hidden="true"></span>
+                    <span class="task-action-btn__label">修改</span>
+                </button>
+                <button class="task-action-btn task-action-btn--stop js-stop-task${disabledClass}" data-task-id="${taskId}" type="button" ${disabledAttr}>
+                    <span class="task-action-btn__icon ms-Icon ms-Icon--Stop" aria-hidden="true"></span>
+                    <span class="task-action-btn__label">${isPending ? '处理中' : '结束'}</span>
+                </button>
+                <button class="task-action-btn task-action-btn--restart js-restart-task${disabledClass}" data-task-id="${taskId}" type="button" ${disabledAttr}>
+                    <span class="task-action-btn__icon ms-Icon ms-Icon--Refresh" aria-hidden="true"></span>
+                    <span class="task-action-btn__label">${isPending ? '处理中' : '重启'}</span>
+                </button>
+            </div>
         `;
     }
 
-    function postTaskAction(url, successMessage) {
+    function setTaskActionPending(taskId, isPending) {
+        const taskKey = String(taskId);
+        if (isPending) {
+            pendingTaskActions[taskKey] = true;
+        } else {
+            delete pendingTaskActions[taskKey];
+        }
+
+        const row = $(`#task-list-body tr[data-task-id="${taskKey}"]`);
+        if (!row.length) {
+            return;
+        }
+
+        const stopButton = row.find('.js-stop-task');
+        const restartButton = row.find('.js-restart-task');
+        const labelText = isPending ? '处理中' : null;
+
+        stopButton.prop('disabled', isPending).attr('aria-disabled', String(isPending)).toggleClass('is-disabled', isPending);
+        restartButton.prop('disabled', isPending).attr('aria-disabled', String(isPending)).toggleClass('is-disabled', isPending);
+
+        if (isPending) {
+            stopButton.find('.task-action-btn__label').text(labelText);
+            restartButton.find('.task-action-btn__label').text(labelText);
+        } else {
+            stopButton.find('.task-action-btn__label').text('结束');
+            restartButton.find('.task-action-btn__label').text('重启');
+        }
+    }
+
+    function hideToast() {
+        $('#taskToast').removeClass('show success error');
+        if (toastTimer) {
+            clearTimeout(toastTimer);
+            toastTimer = null;
+        }
+    }
+
+    function showToast(type, title, message) {
+        const toast = $('#taskToast');
+        const isError = type === 'error';
+        $('#taskToastIcon').text(isError ? '✖' : '✔');
+        $('#taskToastTitle').text(title || (isError ? '操作失败' : '操作成功'));
+        $('#taskToastBody').text(message || '');
+        toast.removeClass('success error').addClass(type).addClass('show');
+        if (toastTimer) {
+            clearTimeout(toastTimer);
+        }
+        toastTimer = setTimeout(function () {
+            hideToast();
+        }, 4000);
+    }
+
+    function setConfirmVisible(visible) {
+        const modal = $('#taskConfirmModal');
+        modal.toggleClass('show', visible);
+        modal.attr('aria-hidden', visible ? 'false' : 'true');
+    }
+
+    function resolveConfirm(result) {
+        if (confirmResolver) {
+            const currentResolver = confirmResolver;
+            confirmResolver = null;
+            currentResolver(result);
+        }
+        setConfirmVisible(false);
+    }
+
+    function showConfirmDialog(title, message) {
+        $('#taskConfirmTitle').text(title || '请确认操作');
+        $('#taskConfirmBody').text(message || '确认要继续执行当前操作吗？');
+        setConfirmVisible(true);
+        return new Promise(function (resolve) {
+            confirmResolver = resolve;
+        });
+    }
+
+    function setModalVisible(visible) {
+        const modal = $('#editTaskModal');
+        modal.toggleClass('show', visible);
+        modal.attr('aria-hidden', visible ? 'false' : 'true');
+    }
+
+    function closeEditModal() {
+        $('#editTaskForm')[0].reset();
+        $('#editTaskId').val('');
+        setModalVisible(false);
+    }
+
+    function populateEditForm(task) {
+        $('#editTaskId').val(task.id || '');
+        $('#editTaskName').val(task.taskname || '');
+        $('#editUdpPort').val(task.udp_port ?? '');
+        $('#editVideoPort').val(task.port ?? '');
+        $('#editEventPort').val(task.event_port ?? '');
+        $('#editTestMode').val(String(task.test_mode ?? 0));
+        $('#editCam1Ip').val(task.cam1_ip || '');
+        $('#editCam1Username').val(task.cam1_username || '');
+        $('#editCam1Password').val(task.cam1_password || '');
+        $('#editUrl').val(task.url || '');
+        setModalVisible(true);
+    }
+
+    function normalizeNumber(value) {
+        if (value === '' || value === null || value === undefined) {
+            return null;
+        }
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function postTaskAction(taskId, url, successMessage) {
+        setTaskActionPending(taskId, true);
         return $.ajax({
             url: url,
             type: "POST",
             success: function (response) {
                 if (response.status === 200) {
-                    alert(successMessage);
+                    showToast('success', '操作成功', successMessage);
                     loadTasks();
                 } else {
-                    alert(response.msg || "操作失败");
+                    showToast('error', '操作失败', response.msg || '操作失败');
                 }
             },
             error: function (xhr) {
-                alert("请求失败：" + (xhr.responseJSON?.msg || xhr.responseText || "未知错误"));
+                showToast('error', '请求失败', xhr.responseJSON?.msg || xhr.responseText || '未知错误');
+            },
+            complete: function () {
+                setTaskActionPending(taskId, false);
             }
         });
     }
@@ -34,23 +213,25 @@ $(document).ready(function () {
                    const tasks = response.data;
                    const tbody = $("#task-list-body");
                    tbody.empty(); // 清空表格内容
+                   Object.keys(taskCache).forEach(key => delete taskCache[key]);
                    if (!tasks || tasks.length === 0) {
-                       tbody.append('<tr><td class="ms-Table-cell" colspan="11" style="text-align: center;">暂无任务</td></tr>');
+                       tbody.append('<tr><td class="ms-Table-cell table-message-cell" colspan="11">暂无任务</td></tr>');
                        return;
                    }
                    tasks.forEach(task => {
+                       taskCache[String(task.id)] = task;
                        tbody.append(`
-                           <tr data-task-id="${task.id}">
-                                <td class="ms-Table-cell">${task.id}</td>
-                                <td class="ms-Table-cell">${task.taskname || ''}</td>
-                                <td class="ms-Table-cell">${task.udp_port !== null && task.udp_port !== undefined ? task.udp_port : ''}</td>
-                                <td class="ms-Table-cell">${task.create_time || ''}</td>
-                               <td class="ms-Table-cell">${task.port || ''}</td>  
-                               <td class="ms-Table-cell">${task.cam1_ip || ''}</td>
-                               <td class="ms-Table-cell">${task.cam1_username || ''}</td>
-                               <td class="ms-Table-cell">${task.cam1_password || ''}</td>
-                               <td class="ms-Table-cell">${task.url || ''}</td>
-                               <td class="ms-Table-cell">${task.event_port || ''}</td>
+                           <tr data-task-id="${escapeHtml(task.id)}">
+                                <td class="ms-Table-cell">${escapeHtml(task.id)}</td>
+                                <td class="ms-Table-cell">${escapeHtml(task.taskname || '')}</td>
+                                <td class="ms-Table-cell">${escapeHtml(task.udp_port !== null && task.udp_port !== undefined ? task.udp_port : '')}</td>
+                                <td class="ms-Table-cell">${escapeHtml(task.create_time || '')}</td>
+                               <td class="ms-Table-cell">${escapeHtml(task.port || '')}</td>  
+                               <td class="ms-Table-cell">${escapeHtml(task.cam1_ip || '')}</td>
+                               <td class="ms-Table-cell">${escapeHtml(task.cam1_username || '')}</td>
+                               <td class="ms-Table-cell">${escapeHtml(task.cam1_password || '')}</td>
+                               <td class="ms-Table-cell">${escapeHtml(task.url || '')}</td>
+                               <td class="ms-Table-cell">${escapeHtml(task.event_port || '')}</td>
                                <td class="ms-Table-cell">${renderActionButtons(task.id)}</td>
                             <!--    <td class="ms-Table-cell">${tasks.cam2_ip}</td>
                                 <td class="ms-Table-cell">${tasks.cam2_username}</td>
@@ -60,29 +241,127 @@ $(document).ready(function () {
                        `);
                    });
                } else {
-                   alert("加载任务列表失败：" + response.msg);
+                   showToast('error', '加载失败', response.msg || '加载任务列表失败');
                }
            },
            error: function () {
-               alert("请求失败");
+               showToast('error', '加载失败', '请求失败，请稍后重试');
            }
        });
    }
 
-   $(document).on('click', '.js-stop-task', function () {
+   $(document).on('click', '.js-stop-task', async function () {
        const taskId = $(this).data('task-id');
-       if (!taskId) return;
-       if (!confirm('确定要结束并删除该任务记录吗？')) return;
-       postTaskAction(`/task/${taskId}/stop`, '结束并删除成功');
+       if (!taskId || $(this).prop('disabled')) return;
+       const confirmed = await showConfirmDialog('确认结束任务', '确定要结束并删除该任务记录吗？');
+       if (!confirmed) return;
+       postTaskAction(taskId, `/task/${taskId}/stop`, '结束并删除成功');
    });
 
-   $(document).on('click', '.js-restart-task', function () {
+   $(document).on('click', '.js-edit-task', function () {
+       const taskId = String($(this).data('task-id'));
+       const task = taskCache[taskId];
+       if (!task) {
+           showToast('error', '打开失败', '未找到任务数据');
+           return;
+       }
+       populateEditForm(task);
+   });
+
+   $(document).on('click', '.js-restart-task', async function () {
        const taskId = $(this).data('task-id');
-       if (!taskId) return;
-       if (!confirm('确定要根据当前记录重启该任务吗？')) return;
-       postTaskAction(`/task/${taskId}/restart`, '重启成功');
+       if (!taskId || $(this).prop('disabled')) return;
+       const confirmed = await showConfirmDialog('确认重启任务', '确定要根据当前记录重启该任务吗？');
+       if (!confirmed) return;
+       postTaskAction(taskId, `/task/${taskId}/restart`, '重启成功');
+   });
+
+   $('#cancelEditTaskBtn').on('click', function () {
+       closeEditModal();
+   });
+
+   $('#editTaskModal').on('click', function (event) {
+       if (event.target.id === 'editTaskModal') {
+           closeEditModal();
+       }
+   });
+
+   $('#taskToastClose').on('click', function () {
+       hideToast();
+   });
+
+   $('#taskConfirmCancelBtn').on('click', function () {
+       resolveConfirm(false);
+   });
+
+   $('#taskConfirmSubmitBtn').on('click', function () {
+       resolveConfirm(true);
+   });
+
+   $('#taskConfirmModal').on('click', function (event) {
+       if (event.target.id === 'taskConfirmModal') {
+           resolveConfirm(false);
+       }
+   });
+
+   $(document).on('keydown', function (event) {
+       if (event.key === 'Escape' && $('#taskConfirmModal').hasClass('show')) {
+           resolveConfirm(false);
+           return;
+       }
+       if (event.key === 'Escape' && $('#editTaskModal').hasClass('show')) {
+           closeEditModal();
+       }
+   });
+
+   $('#editTaskForm').on('submit', function (event) {
+       event.preventDefault();
+       const taskId = $('#editTaskId').val();
+       if (!taskId) {
+           showToast('error', '保存失败', '任务ID不能为空');
+           return;
+       }
+
+       const saveButton = $('#saveEditTaskBtn');
+       const payload = {
+           taskname: $('#editTaskName').val().trim(),
+           udp_port: normalizeNumber($('#editUdpPort').val()),
+           port: normalizeNumber($('#editVideoPort').val()),
+           event_port: normalizeNumber($('#editEventPort').val()),
+           test_mode: normalizeNumber($('#editTestMode').val()),
+           cam1_ip: $('#editCam1Ip').val().trim(),
+           cam1_username: $('#editCam1Username').val().trim(),
+           cam1_password: $('#editCam1Password').val().trim(),
+           url: $('#editUrl').val().trim()
+       };
+
+       saveButton.prop('disabled', true).text('保存中...');
+
+       $.ajax({
+           url: `/task/${encodeURIComponent(taskId)}`,
+           type: 'PUT',
+           contentType: 'application/json',
+           data: JSON.stringify(payload),
+           success: function (response) {
+               if (response.status === 200) {
+                   showToast('success', '保存成功', response.msg || '任务信息已更新');
+                   closeEditModal();
+                   loadTasks();
+               } else {
+                   showToast('error', '保存失败', response.msg || '修改失败');
+               }
+           },
+           error: function (xhr) {
+               showToast('error', '保存失败', xhr.responseJSON?.msg || xhr.responseText || '请求失败，请稍后重试');
+           },
+           complete: function () {
+               saveButton.prop('disabled', false).text('保存');
+           }
+       });
    });
 
    // 页面加载时调用
+    initializeAuthState();
+    bindLogoutAction();
    loadTasks();
 });

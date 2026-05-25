@@ -8,45 +8,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fabric.min.css') }}">
     <!-- 引入自定义样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .logout-container {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            padding: 6px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .user-info {
-            position: absolute;
-            right: 180px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #fff;
-            font-size: 14px;
-        }
-        .main-container {
-            margin-top: 60px;
-            padding: 20px;
-        }
-        .table-wrapper {
-            overflow-x: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
 </head>
 <body class="ms-Fabric">
-    <header class="ms-bgColor-themePrimary ms-fontColor-white ms-font-xl ms-textAlign-center ms-fontWeight-semibold ms-Grid" style="position: relative;">
+    <header class="ms-bgColor-themePrimary ms-fontColor-white ms-font-xl ms-textAlign-center ms-fontWeight-semibold ms-Grid page-header">
         <h4>任务服务管理</h4>
         <div class="user-info" id="userInfo"></div>
         <div class="logout-container">
@@ -58,7 +23,7 @@
         <table class="ms-Table" id="task-list">
             <thead>
                 <tr>
-                    <th class="ms-Table-cell" style="width: 100px;">任务ID</th>
+                    <th class="ms-Table-cell task-id-col">任务ID</th>
                     <th class="ms-Table-cell">任务名称</th>
                     <th class="ms-Table-cell">UDP端口</th>
                     <th class="ms-Table-cell">创建时间</th>
@@ -78,7 +43,7 @@
             </thead>
             <tbody id="task-list-body">
                 <tr id="loading-row">
-                    <td class="ms-Table-cell" colspan="12" style="text-align: center;">加载中...</td>
+                    <td class="ms-Table-cell table-message-cell" colspan="12">加载中...</td>
                 </tr>
                
          </tbody>
@@ -86,43 +51,84 @@
         </div>
     </main>
 
-    <script>
-        // 页面加载时检查登录状态
-        document.addEventListener('DOMContentLoaded', function() {
-            // 检查登录状态
-            fetch('/api/auth/status')
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.logged_in) {
-                        window.location.href = '/login';
-                        return;
-                    }
-                    // 显示用户名
-                    document.getElementById('userInfo').textContent = '欢迎, ' + (data.username || '用户');
-                })
-                .catch(err => {
-                    console.error('Check auth status error:', err);
-                    window.location.href = '/login';
-                });
+    <div class="toast-container" aria-live="polite" aria-atomic="true">
+        <div class="toast-message success" id="taskToast">
+            <div class="toast-content">
+                <span class="toast-icon" id="taskToastIcon">✔</span>
+                <div class="toast-text">
+                    <p class="toast-title" id="taskToastTitle">操作成功</p>
+                    <p class="toast-body" id="taskToastBody">任务信息已更新。</p>
+                </div>
+                <button type="button" class="toast-close" id="taskToastClose" aria-label="关闭提示">×</button>
+            </div>
+        </div>
+    </div>
 
-            // 退出登录按钮
-            document.getElementById('logoutBtn').addEventListener('click', function() {
-                fetch('/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    window.location.href = '/login';
-                })
-                .catch(err => {
-                    window.location.href = '/login';
-                });
-            });
-        });
-    </script>
+    <div class="confirm-mask" id="taskConfirmModal" aria-hidden="true">
+        <div class="confirm-panel" role="dialog" aria-modal="true" aria-labelledby="taskConfirmTitle" aria-describedby="taskConfirmBody">
+            <h3 class="confirm-title" id="taskConfirmTitle">请确认操作</h3>
+            <p class="confirm-body" id="taskConfirmBody">确认要继续执行当前操作吗？</p>
+            <div class="confirm-actions">
+                <button type="button" class="modal-action-btn cancel" id="taskConfirmCancelBtn">取消</button>
+                <button type="button" class="modal-action-btn submit" id="taskConfirmSubmitBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-mask" id="editTaskModal" aria-hidden="true">
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="editTaskTitle">
+            <h3 class="modal-title" id="editTaskTitle">修改任务</h3>
+            <form id="editTaskForm">
+                <input type="hidden" id="editTaskId" name="taskId">
+                <div class="modal-form-grid">
+                    <div class="modal-form-item">
+                        <label for="editTaskName">任务名称</label>
+                        <input type="text" id="editTaskName" name="taskname" maxlength="100">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editUdpPort">UDP端口</label>
+                        <input type="number" id="editUdpPort" name="udp_port" min="1">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editVideoPort">视频端口</label>
+                        <input type="number" id="editVideoPort" name="port" min="1">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editEventPort">事件端口</label>
+                        <input type="number" id="editEventPort" name="event_port" min="1">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editTestMode">测试模式</label>
+                        <select id="editTestMode" name="test_mode">
+                            <option value="0">否</option>
+                            <option value="1">是</option>
+                        </select>
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editCam1Ip">摄像机1_ip</label>
+                        <input type="text" id="editCam1Ip" name="cam1_ip" maxlength="1000">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editCam1Username">摄像机1_用户名</label>
+                        <input type="text" id="editCam1Username" name="cam1_username" maxlength="1000">
+                    </div>
+                    <div class="modal-form-item">
+                        <label for="editCam1Password">摄像机1_密码</label>
+                        <input type="text" id="editCam1Password" name="cam1_password" maxlength="1000">
+                    </div>
+                    <div class="modal-form-item full-width">
+                        <label for="editUrl">视频URL</label>
+                        <input type="text" id="editUrl" name="url" maxlength="4000">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-action-btn cancel" id="cancelEditTaskBtn">取消</button>
+                    <button type="submit" class="modal-action-btn submit" id="saveEditTaskBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
      <!-- 引入 jQuery -->
      <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
      <script src="{{ url_for('static', filename='js/manager.js') }}"></script>

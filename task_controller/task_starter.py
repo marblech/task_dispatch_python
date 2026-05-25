@@ -154,7 +154,7 @@ def start_task_process(task:TaskConfig,port=None):
         port = task.port
         
         # 动态分配UDP端口并保存到 task.udp_port
-        _assign_available_udp_port(task)
+        _assign_available_udp_port(task, preferred_udp_port=task.udp_port)
         udp_port = task.udp_port
         print(f'Assigned UDP port: {udp_port} for task {task.taskname}')
         

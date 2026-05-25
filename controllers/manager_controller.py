@@ -55,7 +55,8 @@ def get_task_list():
             "cam1_username": task.cam1_username,
             "cam1_password": task.cam1_password,
             "url": task.url,
-            "event_port": task.event_port
+            "event_port": task.event_port,
+            "test_mode": task.test_mode,
             # "cam2_ip": task.cam2_ip,
             # "cam2_username": task.cam2_username,
             # "cam2_password": task.cam2_password,
@@ -88,8 +89,79 @@ def get_task_detail(task_id):
             'cam1_password': task.cam1_password,
             'url': task.url,
             'event_port': task.event_port,
+            'test_mode': task.test_mode,
         })
     except Exception as e:
         return response_json(500, '查询失败', str(e))
+    finally:
+        session_db.close()
+
+
+@manager_controller.route('/task/<string:task_id>', methods=['PUT'])
+@login_required
+def update_task(task_id):
+    db = dbconn.DBConn()
+    session_db = db.get_session()
+    try:
+        from controllers.process_controller import restart_task_with_existing_record
+
+        payload = request.get_json(silent=True) or {}
+        task = session_db.query(TaskConfig).filter_by(id=task_id).first()
+        if not task:
+            return response_json(404, '任务不存在')
+
+        def normalize_str(value):
+            if value is None:
+                return None
+            return str(value).strip()
+
+        def normalize_int(value, field_name='字段'):
+            if value in (None, ''):
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                raise ValueError(f'{field_name}必须是整数')
+
+        taskname = normalize_str(payload.get('taskname'))
+        if not taskname:
+            return response_json(400, '任务名称不能为空')
+
+        test_mode = normalize_int(payload.get('test_mode'), '测试模式')
+        if test_mode not in (0, 1):
+            raise ValueError('测试模式只允许为0或1')
+
+        task.taskname = taskname
+        task.udp_port = normalize_int(payload.get('udp_port'), 'UDP端口')
+        task.port = normalize_int(payload.get('port'), '视频端口')
+        task.event_port = normalize_int(payload.get('event_port'), '事件端口')
+        task.test_mode = test_mode
+        task.cam1_ip = normalize_str(payload.get('cam1_ip'))
+        task.cam1_username = normalize_str(payload.get('cam1_username'))
+        task.cam1_password = normalize_str(payload.get('cam1_password'))
+        task.url = normalize_str(payload.get('url'))
+        task.update_time = datetime.now()
+
+        new_task = restart_task_with_existing_record(session_db, task)
+        return response_json(200, '修改成功，任务已重启', {
+            'id': new_task.id,
+            'taskname': new_task.taskname,
+            'udp_port': new_task.udp_port,
+            'port': new_task.port,
+            'event_port': new_task.event_port,
+            'cam1_ip': new_task.cam1_ip,
+            'cam1_username': new_task.cam1_username,
+            'cam1_password': new_task.cam1_password,
+            'url': new_task.url,
+            'test_mode': new_task.test_mode,
+            'pid': new_task.pid,
+            'update_time': str(new_task.update_time) if new_task.update_time else None,
+        })
+    except ValueError as e:
+        session_db.rollback()
+        return response_json(400, str(e))
+    except Exception as e:
+        session_db.rollback()
+        return response_json(500, '修改失败', str(e))
     finally:
         session_db.close()
