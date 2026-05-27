@@ -3,6 +3,7 @@ $(document).ready(function () {
     const pendingTaskActions = {};
     let toastTimer = null;
     let confirmResolver = null;
+    let currentLogTaskId = null;
 
     function initializeAuthState() {
         fetch('/api/auth/status')
@@ -68,6 +69,32 @@ $(document).ready(function () {
                     <span class="task-action-btn__label">${isPending ? '处理中' : '重启'}</span>
                 </button>
             </div>
+        `;
+    }
+
+    function renderUrlCell(task) {
+        const urlValue = task.url || '';
+        if (!urlValue) {
+            return '<span class="task-url-empty">--</span>';
+        }
+
+        return `
+            <button class="task-url-btn js-open-player" data-task-id="${escapeHtml(task.id)}" type="button" title="点击播放视频流">
+                ${escapeHtml(urlValue)}
+            </button>
+        `;
+    }
+
+    function renderLogCell(task) {
+        if (!task.log_file) {
+            return '<span class="task-url-empty">--</span>';
+        }
+
+        return `
+            <button class="task-action-btn task-action-btn--log js-view-log" data-task-id="${escapeHtml(task.id)}" type="button" title="${escapeHtml(task.log_file)}">
+                <span class="task-action-btn__icon ms-Icon ms-Icon--TextDocument" aria-hidden="true"></span>
+                <span class="task-action-btn__label">查看日志</span>
+            </button>
         `;
     }
 
@@ -159,6 +186,79 @@ $(document).ready(function () {
         setModalVisible(false);
     }
 
+    function setLogModalVisible(visible) {
+        const modal = $('#taskLogModal');
+        modal.toggleClass('show', visible);
+        modal.attr('aria-hidden', visible ? 'false' : 'true');
+    }
+
+    function updateLogModal(task, options) {
+        const taskLabel = task && (task.taskname || `任务 ${task.id}`);
+        $('#taskLogTitle').text(taskLabel ? `${taskLabel} 日志` : '任务日志');
+        $('#taskLogPath').text(options.path || (task && task.log_file) || '未选择日志文件');
+        $('#taskLogStatus').text(options.status || '日志已加载');
+        $('#taskLogContent').text(options.content || '暂无日志内容');
+    }
+
+    function closeLogModal() {
+        currentLogTaskId = null;
+        updateLogModal(null, {
+            path: '未选择日志文件',
+            status: '点击“查看日志”后加载内容。',
+            content: '暂无日志内容'
+        });
+        setLogModalVisible(false);
+    }
+
+    function openLogModal(task) {
+        currentLogTaskId = String(task.id);
+        updateLogModal(task, {
+            path: task.log_file || '未记录日志文件路径',
+            status: '正在加载日志内容...',
+            content: '加载中...'
+        });
+        setLogModalVisible(true);
+
+        $.ajax({
+            url: `/task/${encodeURIComponent(task.id)}/log`,
+            type: 'GET',
+            success: function (response) {
+                if (String(task.id) !== currentLogTaskId) {
+                    return;
+                }
+
+                if (response.status === 200 && response.data) {
+                    updateLogModal(task, {
+                        path: response.data.log_file || task.log_file || '未记录日志文件路径',
+                        status: response.data.content ? '日志加载完成' : '日志文件为空',
+                        content: response.data.content || '日志文件为空'
+                    });
+                } else {
+                    const errorMessage = response.msg || '读取日志失败';
+                    updateLogModal(task, {
+                        path: task.log_file || '未记录日志文件路径',
+                        status: errorMessage,
+                        content: '未能读取日志内容'
+                    });
+                    showToast('error', '日志加载失败', errorMessage);
+                }
+            },
+            error: function (xhr) {
+                if (String(task.id) !== currentLogTaskId) {
+                    return;
+                }
+
+                const errorMessage = xhr.responseJSON?.msg || xhr.responseText || '请求失败，请稍后重试';
+                updateLogModal(task, {
+                    path: task.log_file || '未记录日志文件路径',
+                    status: errorMessage,
+                    content: '未能读取日志内容'
+                });
+                showToast('error', '日志加载失败', errorMessage);
+            }
+        });
+    }
+
     function populateEditForm(task) {
         $('#editTaskId').val(task.id || '');
         $('#editTaskName').val(task.taskname || '');
@@ -169,6 +269,7 @@ $(document).ready(function () {
         $('#editCam1Ip').val(task.cam1_ip || '');
         $('#editCam1Username').val(task.cam1_username || '');
         $('#editCam1Password').val(task.cam1_password || '');
+        $('#editCam1SourceUrl').val(task.cam1_source_url || '');
         $('#editUrl').val(task.url || '');
         setModalVisible(true);
     }
@@ -215,7 +316,7 @@ $(document).ready(function () {
                    tbody.empty(); // 清空表格内容
                    Object.keys(taskCache).forEach(key => delete taskCache[key]);
                    if (!tasks || tasks.length === 0) {
-                       tbody.append('<tr><td class="ms-Table-cell table-message-cell" colspan="11">暂无任务</td></tr>');
+                       tbody.append('<tr><td class="ms-Table-cell table-message-cell" colspan="12">暂无任务</td></tr>');
                        return;
                    }
                    tasks.forEach(task => {
@@ -230,8 +331,9 @@ $(document).ready(function () {
                                <td class="ms-Table-cell">${escapeHtml(task.cam1_ip || '')}</td>
                                <td class="ms-Table-cell">${escapeHtml(task.cam1_username || '')}</td>
                                <td class="ms-Table-cell">${escapeHtml(task.cam1_password || '')}</td>
-                               <td class="ms-Table-cell">${escapeHtml(task.url || '')}</td>
+                               <td class="ms-Table-cell">${renderUrlCell(task)}</td>
                                <td class="ms-Table-cell">${escapeHtml(task.event_port || '')}</td>
+                               <td class="ms-Table-cell">${renderLogCell(task)}</td>
                                <td class="ms-Table-cell">${renderActionButtons(task.id)}</td>
                             <!--    <td class="ms-Table-cell">${tasks.cam2_ip}</td>
                                 <td class="ms-Table-cell">${tasks.cam2_username}</td>
@@ -266,6 +368,33 @@ $(document).ready(function () {
            return;
        }
        populateEditForm(task);
+   });
+
+   $(document).on('click', '.js-open-player', function () {
+       const taskId = String($(this).data('task-id'));
+       const task = taskCache[taskId];
+       if (!task || !task.url) {
+           showToast('error', '播放失败', '该任务没有可用的视频URL');
+           return;
+       }
+
+       if (!window.managerStreamPlayer || typeof window.managerStreamPlayer.open !== 'function') {
+           showToast('error', '播放器不可用', '播放器脚本未正确加载');
+           return;
+       }
+
+       window.managerStreamPlayer.open(task.url, task.taskname || `任务 ${task.id}`);
+   });
+
+   $(document).on('click', '.js-view-log', function () {
+       const taskId = String($(this).data('task-id'));
+       const task = taskCache[taskId];
+       if (!task || !task.log_file) {
+           showToast('error', '查看失败', '该任务未记录日志文件路径');
+           return;
+       }
+
+       openLogModal(task);
    });
 
    $(document).on('click', '.js-restart-task', async function () {
@@ -304,9 +433,37 @@ $(document).ready(function () {
        }
    });
 
+   $('#taskLogCloseBtn, #taskLogCloseFooterBtn').on('click', function () {
+       closeLogModal();
+   });
+
+   $('#taskLogRefreshBtn').on('click', function () {
+       if (!currentLogTaskId) {
+           return;
+       }
+
+       const task = taskCache[currentLogTaskId];
+       if (!task) {
+           showToast('error', '刷新失败', '未找到任务数据');
+           return;
+       }
+
+       openLogModal(task);
+   });
+
+   $('#taskLogModal').on('click', function (event) {
+       if (event.target.id === 'taskLogModal') {
+           closeLogModal();
+       }
+   });
+
    $(document).on('keydown', function (event) {
        if (event.key === 'Escape' && $('#taskConfirmModal').hasClass('show')) {
            resolveConfirm(false);
+           return;
+       }
+       if (event.key === 'Escape' && $('#taskLogModal').hasClass('show')) {
+           closeLogModal();
            return;
        }
        if (event.key === 'Escape' && $('#editTaskModal').hasClass('show')) {
@@ -332,6 +489,7 @@ $(document).ready(function () {
            cam1_ip: $('#editCam1Ip').val().trim(),
            cam1_username: $('#editCam1Username').val().trim(),
            cam1_password: $('#editCam1Password').val().trim(),
+           cam1_source_url: $('#editCam1SourceUrl').val().trim(),
            url: $('#editUrl').val().trim()
        };
 

@@ -8,31 +8,22 @@ from controllers.manager_controller import manager_controller
 from controllers.auth_controller import auth_bp, init_default_user
 from task_controller.task_starter import start_task_process, is_managed_temp_model_file
 from task_controller.cleanup_daemon import start_cleanup_daemon
-from udp_controller.udp_listener import DEFAULT_UDP_PORT, start_udp_listener
+from udp_controller.udp_listener import start_udp_listener
 import time
-import logging
 
 from db import dbconn
 import os
 from pathlib import Path
 
 DEBUG_MODE = False
-HOST = os.environ.get('WEBAPI_HOST', '0.0.0.0')
-PORT = int(os.environ.get('WEBAPI_PORT', '8212'))
-UDP_LISTEN_PORT = int(os.environ.get('UDP_LISTEN_PORT', str(DEFAULT_UDP_PORT)))
+HOST = '0.0.0.0'
+PORT = 8212
 DIRECT_RUN_THREADED = DEBUG_MODE
 
 
 # 设置session密钥
 import secrets
 SESSION_SECRET = os.environ.get('SESSION_SECRET', secrets.token_hex(32))
-
-
-def configure_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
-    )
 
 def create_app():
     app = Flask(__name__)
@@ -111,8 +102,8 @@ def start_background_services():
         print(f'[bootstrap] cleanup daemon not started: {exc}')
 
     try:
-        start_udp_listener(listen_port=UDP_LISTEN_PORT)
-        print(f'[bootstrap] UDP listener started successfully on port {UDP_LISTEN_PORT}')
+        start_udp_listener()
+        print('[bootstrap] UDP listener started successfully')
     except Exception as exc:
         print(f'[bootstrap] UDP listener not started: {exc}')
 
@@ -140,7 +131,6 @@ def should_bootstrap_services() -> bool:
 
 if __name__ == '__main__':
     # 保留本地调试直启动能力，但生产环境推荐使用 gunicorn。
-    configure_logging()
     print(f"[bootstrap] debug={DEBUG_MODE}, WERKZEUG_RUN_MAIN={os.environ.get('WERKZEUG_RUN_MAIN')}")
     if should_bootstrap_services():
         print('[bootstrap] executing bootstrap_services()')

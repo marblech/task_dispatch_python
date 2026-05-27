@@ -163,7 +163,7 @@ def start_task_process(task:TaskConfig,port=None):
         ini_fullpath = Path(get_ini_filepath('config'))
         IniFileHelper.ensure_config(ini_fullpath)
         # IniFileHelper.set_value("SystemSettings","port",str(port),ini_fullpath)              
-        if task.cam1_password=="testtesttest":
+        if task.test_mode==0:
             org_det_onnx = Path(PROGRAM_PATH+'/models/'+'yolov4_ship.om')
             onnx_file,onnx_fullpath=get_onnx_filepath('yolov4_ship')
             dst_det_onnx = Path(onnx_fullpath)
@@ -203,10 +203,13 @@ def start_task_process(task:TaskConfig,port=None):
         # task.cam2_id = task.cameras[1].id
         
         # if task.cam1_type in {1,2,3,4}:
-        if task.cam1_password=="testtesttest":
-            cam1_stream_str = str(f"rtsp://{task.cam1_ip}/live/stream")
+        if task.cam1_source_url not in (None, ""):
+            cam1_stream_str = task.cam1_source_url
         else:
-            cam1_stream_str = str(f"rtsp://{task.cam1_username}:{task.cam1_password}@{task.cam1_ip}/h264/ch1/sub/av_stream")
+            if task.test_mode==1:
+                cam1_stream_str = str(f"rtsp://{task.cam1_ip}/live/stream")
+            else:
+                cam1_stream_str = str(f"rtsp://{task.cam1_username}:{task.cam1_password}@{task.cam1_ip}/h264/ch1/sub/av_stream")
         IniFileHelper.set_value("ScanCam","rtsp_url",str(cam1_stream_str),ini_fullpath)
         IniFileHelper.set_value("ScanCam","ip",str(task.cam1_ip),ini_fullpath)
         IniFileHelper.set_value("ScanCam","username",str(task.cam1_username),ini_fullpath)
@@ -332,6 +335,7 @@ def start_task_process(task:TaskConfig,port=None):
         # task.resnet_file = str(dst_trk_onnx)
         task.yolo_file = str(dst_det_onnx)
         task.ini_file = str(ini_fullpath)
+        task.log_file = str(container_log_file)
         task.port = port
         # udp_port 已在之前分配到 task.udp_port
         return task

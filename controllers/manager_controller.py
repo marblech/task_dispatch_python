@@ -1,10 +1,11 @@
-from flask import Blueprint, make_response, render_template, send_from_directory
+from flask import Blueprint, make_response, render_template
 from flask import request, jsonify,Response
 from models.process import TaskConfig
 from db import dbconn
 from datetime import datetime  # 添加 datetime 模块
 import json
 import os
+from pathlib import Path
 from flask import session, redirect
 
 def response_json(code, msg, data=None):
@@ -28,6 +29,7 @@ def login_required(f):
     return decorated_function
 
 manager_controller = Blueprint('manager', __name__)
+LOG_ROOT_DIR = Path('/data/webapi/logs').resolve()
 
 @manager_controller.route('/favicon.ico')
 def favicon():
@@ -54,9 +56,11 @@ def get_task_list():
             "cam1_ip": task.cam1_ip,
             "cam1_username": task.cam1_username,
             "cam1_password": task.cam1_password,
+            "cam1_source_url": task.cam1_source_url,
             "url": task.url,
             "event_port": task.event_port,
             "test_mode": task.test_mode,
+            "log_file": task.log_file,
             # "cam2_ip": task.cam2_ip,
             # "cam2_username": task.cam2_username,
             # "cam2_password": task.cam2_password,
@@ -87,12 +91,57 @@ def get_task_detail(task_id):
             'cam1_ip': task.cam1_ip,
             'cam1_username': task.cam1_username,
             'cam1_password': task.cam1_password,
+            'cam1_source_url': task.cam1_source_url,
             'url': task.url,
             'event_port': task.event_port,
             'test_mode': task.test_mode,
+            'log_file': task.log_file,
         })
     except Exception as e:
         return response_json(500, '查询失败', str(e))
+    finally:
+        session_db.close()
+
+
+@manager_controller.route('/task/<string:task_id>/log', methods=['GET'])
+@login_required
+def get_task_log(task_id):
+    db = dbconn.DBConn()
+    session_db = db.get_session()
+    try:
+        task = session_db.query(TaskConfig).filter_by(id=task_id).first()
+        if not task:
+            return response_json(404, '任务不存在')
+
+        if not task.log_file:
+            return response_json(404, '任务未记录日志文件路径')
+
+        log_path = Path(task.log_file).expanduser()
+        if not log_path.is_absolute():
+            log_path = LOG_ROOT_DIR / log_path
+
+        try:
+            resolved_log_path = log_path.resolve(strict=False)
+        except Exception:
+            return response_json(400, '日志文件路径无效')
+
+        if LOG_ROOT_DIR not in resolved_log_path.parents and resolved_log_path != LOG_ROOT_DIR:
+            return response_json(400, '日志文件路径不受支持')
+
+        if not resolved_log_path.exists() or not resolved_log_path.is_file():
+            return response_json(404, '日志文件不存在')
+
+        with resolved_log_path.open('r', encoding='utf-8', errors='replace') as log_fp:
+            content = log_fp.read()
+
+        return response_json(200, '查询成功', {
+            'task_id': task.id,
+            'taskname': task.taskname,
+            'log_file': str(resolved_log_path),
+            'content': content,
+        })
+    except Exception as e:
+        return response_json(500, '读取日志失败', str(e))
     finally:
         session_db.close()
 
@@ -139,6 +188,7 @@ def update_task(task_id):
         task.cam1_ip = normalize_str(payload.get('cam1_ip'))
         task.cam1_username = normalize_str(payload.get('cam1_username'))
         task.cam1_password = normalize_str(payload.get('cam1_password'))
+        task.cam1_source_url = normalize_str(payload.get('cam1_source_url'))
         task.url = normalize_str(payload.get('url'))
         task.update_time = datetime.now()
 
@@ -152,6 +202,7 @@ def update_task(task_id):
             'cam1_ip': new_task.cam1_ip,
             'cam1_username': new_task.cam1_username,
             'cam1_password': new_task.cam1_password,
+            'cam1_source_url': new_task.cam1_source_url,
             'url': new_task.url,
             'test_mode': new_task.test_mode,
             'pid': new_task.pid,

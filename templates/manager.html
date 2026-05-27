@@ -6,6 +6,7 @@
     <title>任务服务管理</title>
     <!-- 引入 Fluent UI 样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fabric.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fabric-local.css') }}">
     <!-- 引入自定义样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
@@ -33,6 +34,7 @@
                     <th class="ms-Table-cell">摄像机1_密码</th>
                     <th class="ms-Table-cell">视频URL</th>
                     <th class="ms-Table-cell">事件端口</th>
+                    <th class="ms-Table-cell">查看日志</th>
                     <th class="ms-Table-cell">操作</th>
                     <!-- <th class="ms-Table-cell">摄像机2_ip</th>
                     <th class="ms-Table-cell">摄像机2_用户名</th>
@@ -117,6 +119,10 @@
                         <input type="text" id="editCam1Password" name="cam1_password" maxlength="1000">
                     </div>
                     <div class="modal-form-item full-width">
+                        <label for="editCam1SourceUrl">源视频流</label>
+                        <input type="text" id="editCam1SourceUrl" name="cam1_source_url" maxlength="1000">
+                    </div>
+                    <div class="modal-form-item full-width">
                         <label for="editUrl">视频URL</label>
                         <input type="text" id="editUrl" name="url" maxlength="4000">
                     </div>
@@ -129,8 +135,62 @@
         </div>
     </div>
 
+    <div class="modal-mask log-viewer-modal" id="taskLogModal" aria-hidden="true">
+        <div class="modal-panel log-viewer-panel" role="dialog" aria-modal="true" aria-labelledby="taskLogTitle">
+            <div class="log-viewer-header">
+                <div>
+                    <h3 class="modal-title log-viewer-title" id="taskLogTitle">任务日志</h3>
+                    <p class="log-viewer-path" id="taskLogPath">未选择日志文件</p>
+                </div>
+                <button type="button" class="video-player-close" id="taskLogCloseBtn" aria-label="关闭日志窗口">×</button>
+            </div>
+            <p class="log-viewer-status" id="taskLogStatus">点击“查看日志”后加载内容。</p>
+            <pre class="log-viewer-content" id="taskLogContent">暂无日志内容</pre>
+            <div class="modal-actions">
+                <button type="button" class="modal-action-btn cancel" id="taskLogRefreshBtn">刷新</button>
+                <button type="button" class="modal-action-btn submit" id="taskLogCloseFooterBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-mask video-player-modal" id="videoPlayerModal" aria-hidden="true">
+        <div class="modal-panel video-player-panel" role="dialog" aria-modal="true" aria-labelledby="videoPlayerTitle">
+            <div class="video-player-header">
+                <div>
+                    <h3 class="modal-title video-player-title" id="videoPlayerTitle">视频流播放</h3>
+                    <p class="video-player-subtitle" id="videoPlayerTaskLabel">点击视频URL后自动开始播放。</p>
+                </div>
+                <button type="button" class="video-player-close" id="videoPlayerCloseBtn" aria-label="关闭播放器">×</button>
+            </div>
+
+            <div class="video-player-meta">
+                <span id="videoPlayerSupportBadge" class="video-player-badge">检测中...</span>
+                <span class="video-player-current-url" id="videoPlayerCurrentUrl">未选择视频流</span>
+            </div>
+
+            <p class="video-player-status" id="videoPlayerStatus">等待选择视频流。</p>
+
+            <div class="video-player-wrap">
+                <video
+                    id="videoPlayerElement"
+                    class="video-player-element"
+                    controls
+                    muted
+                    playsinline
+                ></video>
+            </div>
+
+            <div class="modal-actions video-player-actions">
+                <button type="button" class="modal-action-btn cancel" id="videoPlayerStopBtn">停止</button>
+                <button type="button" class="modal-action-btn submit" id="videoPlayerReplayBtn">重新播放</button>
+            </div>
+        </div>
+    </div>
+
      <!-- 引入 jQuery -->
      <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/flv.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/manager_player.js') }}"></script>
      <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
 </body>
 </html>

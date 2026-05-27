@@ -89,6 +89,7 @@ def _restart_task_from_record(session, task: TaskConfig):
     new_task.cam1_ip = task.cam1_ip
     new_task.cam1_username = task.cam1_username
     new_task.cam1_password = task.cam1_password
+    new_task.cam1_source_url = task.cam1_source_url
     new_task.cam2_id = task.cam2_id
     new_task.cam2_ip = task.cam2_ip
     new_task.cam2_username = task.cam2_username

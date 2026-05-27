@@ -58,11 +58,14 @@ class TaskConfig(Base):
     cam2_ip: Mapped[Optional[str]] = mapped_column(String(1000))
     
     cam1_type: Mapped[Optional[int]] = mapped_column(Integer)
+    cam1_source_url: Mapped[Optional[str]] = mapped_column(String(1000))
     cam2_type: Mapped[Optional[int]] = mapped_column(Integer)
     cam1_id: Mapped[str] = mapped_column(String(100))
     cam2_id: Mapped[str] = mapped_column(String(100))
     event_port: Mapped[Optional[int]] = mapped_column(Integer)
     test_mode: Mapped[Optional[int]] = mapped_column(Integer)
+    log_file: Mapped[Optional[str]] = mapped_column(String(1000))
+    
     # region: Mapped[Optional[str]] = mapped_column(String(5000))
     
     # cameras: Mapped[Optional[str]] = mapped_column(String(1000))
@@ -120,6 +123,8 @@ class TaskConfig(Base):
             create_time=TaskConfig._parse_dt(data.get("createTime")),
             update_by=data.get("updateBy"),
             update_time=TaskConfig._parse_dt(data.get("updateTime")),
+            cam1_source_url=data.get("cam1_source_url"),
+            test_mode=TaskConfig._to_int(data.get("test_mode")),
 
             port=TaskConfig._to_int(data.get("port")),
             pid=str(data.get("pid")) if data.get("pid") not in (None, "") else None,

@@ -1,0 +1,77 @@
+@font-face {
+    font-family: 'FabricMDL2Icons';
+    src: url('/static/fabric-assets/icons/fabricmdl2icons-3.54.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (West European)';
+    src: local('Segoe UI'), local('Noto Sans CJK SC'), local('Microsoft YaHei'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (Arabic)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (Cyrillic)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (East European)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (Greek)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (Hebrew)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Segoe UI Web (Vietnamese)';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Selawik Web';
+    src: local('Segoe UI'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Leelawadee UI Web';
+    src: local('Segoe UI'), local('Noto Sans CJK SC'), local('Microsoft YaHei'), local('Arial');
+    font-weight: 100 700;
+    font-style: normal;
+}
+
+.ms-Fabric,
+.ms-Fabric button,
+.ms-Fabric input,
+.ms-Fabric textarea,
+.ms-Fabric select {
+    font-family: 'Segoe UI Web (West European)', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+}
