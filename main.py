@@ -1,4 +1,12 @@
+import logging
 from flask import Flask
+# 如果没有其他地方配置过日志处理器，则设置一个默认的 INFO 级别配置。
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 from flask_cors import CORS
 from sqlalchemy import delete
 from models.process import TaskConfig
@@ -96,17 +104,18 @@ def clean_tasktable():
 
 
 def start_background_services():
+   
     try:
         start_cleanup_daemon(interval_seconds=60)
     except RuntimeError as exc:
         print(f'[bootstrap] cleanup daemon not started: {exc}')
-
+ 
     try:
         start_udp_listener()
         print('[bootstrap] UDP listener started successfully')
     except Exception as exc:
         print(f'[bootstrap] UDP listener not started: {exc}')
-
+ 
 
 app = create_app()
 
@@ -115,7 +124,7 @@ def bootstrap_services():
     """启动后端守护任务与任务恢复流程。"""
     # 初始化默认管理员账号
     init_default_user()
-    
+   
     autostart_task()
     # syn_task()
     start_background_services()
