@@ -46,7 +46,7 @@ from struct import pack, unpack
 # 组播配置
 MULTICAST_GROUP = '239.255.43.21'
 MULTICAST_PORT = 23232
-DEFAULT_INTERFACE = 'ppp0'
+DEFAULT_INTERFACE = 'wlan0'
 
 # 协议常量
 FRAME_HEADER_PAYLOAD = 0xF11F  # 回送报文帧头（小端: 1F F1）
@@ -208,7 +208,12 @@ def build_payload_status_packet(channel: int = 0, frame_seq: int = 0,
     
     # Byte 22-25: 环控设备
     # 格式: 01**02** (**: 00关闭/FF打开)
-    data.extend(pack('<I', env_ctrl & 0xFFFFFFFF))
+    # 按小端字节顺序逐字节写入，严格对应 C++ 实现中 env_ctrl_byte1..4 的写入顺序
+    env = env_ctrl & 0xFFFFFFFF
+    data.append(env & 0xFF)
+    data.append((env >> 8) & 0xFF)
+    data.append((env >> 16) & 0xFF)
+    data.append((env >> 24) & 0xFF)
     
     # Byte 26-29: 伺服方位角 (float)
     data.extend(pack('<f', servo_az))
@@ -530,6 +535,11 @@ def run_sender(count: int = 10, interval: float = 1.0, packet_type: str = 'paylo
     sent_count = 0
     start_time = time.time()
     frame_seq = 0
+    # 确保以下值为 Python 的 float 类型，pack('<f', ...) 会把它们打为 4 字节单精度浮点
+    ir_focal = float(ir_focal)
+    visible_focal = float(visible_focal)
+    servo_az = float(servo_az)
+    servo_el = float(servo_el)
     
     try:
         while running:
@@ -545,12 +555,12 @@ def run_sender(count: int = 10, interval: float = 1.0, packet_type: str = 'paylo
                 packet = build_payload_status_packet(
                     channel=ch,
                     frame_seq=frame_seq,
-                    ir_focal_length=ir_focal,
-                    visible_focal_length=visible_focal,
-                    az_err=1.5 + random.uniform(-0.5, 0.5),
-                    el_err=-2.3 + random.uniform(-0.5, 0.5),
-                    servo_az=servo_az + random.uniform(-1, 1),
-                    servo_el=servo_el + random.uniform(-0.5, 0.5),
+                    ir_focal_length=float(ir_focal),
+                    visible_focal_length=float(visible_focal),
+                    az_err=float(1.5 + random.uniform(-0.5, 0.5)),
+                    el_err=float(-2.3 + random.uniform(-0.5, 0.5)),
+                    servo_az=float(servo_az + random.uniform(-1, 1)),
+                    servo_el=float(servo_el + random.uniform(-0.5, 0.5)),
                     self_check_status=0x0F,
                     tracker_temp=35 + random.randint(-2, 2),
                     cam_temp=32 + random.randint(-2, 2),
@@ -581,7 +591,7 @@ def run_sender(count: int = 10, interval: float = 1.0, packet_type: str = 'paylo
                 packet = build_scan_status_packet(
                     scan_type=scan_type,
                     frame_seq=frame_seq,
-                    scan_speed=10.5 + random.uniform(-1, 1),
+                    scan_speed=float(10.5 + random.uniform(-1, 1)),
                 )
             else:
                 logger.error(f"未知报文类型: {packet_type}")

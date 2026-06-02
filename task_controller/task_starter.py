@@ -189,6 +189,7 @@ def start_task_process(task:TaskConfig,port=None):
         # IniFileHelper.set_value("MOTSettings","weight_file",str(dst_trk_onnx),ini_fullpath)
         
         IniFileHelper.set_value("SystemSettings","taskId",str(task.cam1_id),ini_fullpath)
+        IniFileHelper.set_value("p2p","listen_port",str(task.udp_port),ini_fullpath)
         # IniFileHelper.set_value("SystemSettings","device_id",str(task.cameras[0].id),ini_fullpath)
         
         # task.cam1_username = task.cameras[0].user
@@ -271,18 +272,18 @@ def start_task_process(task:TaskConfig,port=None):
         container_log_file = f'/data/webapi/logs/{task.taskname}_{ts}.log'
 
         if task.cam1_password=="testtesttest":
-            binary_path = '/data/video_ar_app/mery_endec_push'
+            binary_path = '/data/video_ar_app/cam_controller_example'
         else:
-            binary_path = '/data/video_ar_app/mery_endec_push'
+            binary_path = '/data/video_ar_app/cam_controller_example'
 
         cmd = [
             'sh',
             '-c',
             (
-               'export LD_LIBRARY_PATH=/data/ffmpeg_517_install/lib:/data/hksdk_arm/lib:/data/video_ar_app/libs:/data/video_ar_app:$LD_LIBRARY_PATH && '           
+               'export LD_LIBRARY_PATH=/data/boost_182/lib:/data/ffmpeg_517_install/lib:/data/hksdk_arm/lib:/data/video_ar_app/libs:/data/video_ar_app:$LD_LIBRARY_PATH && '           
                                 # 'mkdir -p /data/webapi/logs && '
                f'exec {shlex.quote(binary_path)} '
-               f'--conf {shlex.quote(str(ini_fullpath))} '
+               f'-c {shlex.quote(str(ini_fullpath))} '
                f'>> {shlex.quote(container_log_file)} 2>&1'
             ),
         ]

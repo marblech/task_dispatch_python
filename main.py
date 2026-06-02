@@ -3,7 +3,7 @@ from flask import Flask
 # 如果没有其他地方配置过日志处理器，则设置一个默认的 INFO 级别配置。
 if not logging.getLogger().hasHandlers():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.WARN,
         format='%(asctime)s [%(levelname)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )

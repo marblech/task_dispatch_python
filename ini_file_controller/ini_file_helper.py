@@ -156,6 +156,8 @@ ais_fusion_switch=0
 #基于图像的目标定位功能
 video_target_pos=0
 
+[p2p]
+listen_port=12345
 
 [Mqtt]
 server=172.19.0.18
